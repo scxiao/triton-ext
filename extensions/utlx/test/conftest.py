@@ -2,25 +2,30 @@
 
 import pytest
 
+import triton
+
+try:
+    import utlx_plugin  # noqa: F401  registers passes/dialects/builder and tlx DSL
+    import triton.language.extra.tlx as tlx  # noqa: F401
+    _HAS_UTLX = True
+except (ImportError, RuntimeError):
+    _HAS_UTLX = False
+
 try:
     import torch
     _HAS_TORCH = True
 except ImportError:
     _HAS_TORCH = False
 
-import triton
-
-import utlx_plugin  # noqa: F401  registers passes/dialects/builder and tlx DSL
-import triton.language.extra.tlx as tlx  # noqa: F401
-
 
 def pytest_ignore_collect(collection_path, config):
-    """Skip collection of test files when torch is not installed.
+    """Skip collection of test files when torch or utlx_plugin is unavailable.
 
     Test files import torch at the top level for GPU device detection;
     prevent collection errors in environments without torch installed.
+    utlx_plugin requires a compatible libtriton built with TRITON_EXT_ENABLED=1.
     """
-    if not _HAS_TORCH and collection_path.suffix == ".py" \
+    if (not _HAS_TORCH or not _HAS_UTLX) and collection_path.suffix == ".py" \
             and collection_path.name.startswith("test_"):
         return True
     return None
